@@ -1,0 +1,289 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../bootstrap-3.3.0/css/bootstrap.min.css">
+  <link rel="shortcut icon" href="http://www.sigvaris.com/sites/all/themes/sigvaris/favicon.ico" type="image/vnd.microsoft.icon" />
+  <script src="../jQuery/jquery.min.js"></script>
+
+  <title>Statistiques agent Sigvaris</title> 
+<script>
+var dureePresence = 0;
+var dureeACD =0;
+function dureeToString(nb){
+  if(nb <= 9){
+	return "0" + nb.toString();
+  } else {
+	return nb.toString();
+  }
+}
+
+function dureeToHHMMSS(duree){    // retourne au format MM:SS une durée passee en nombre de secondes
+
+  var heure = Math.round(duree/3600);
+  var reste = duree % 3600;
+  var sec = reste % 60;
+  var min = (reste-sec) / 60;
+  if(heure>0){
+    return dureeToString(heure) + "h " + dureeToString(min) + "m " + dureeToString(sec)+"s";
+  }else{
+    return dureeToString(min) + "m " + dureeToString(sec)+"s";
+  }
+}
+function actualiseCompteur(){
+
+  document.getElementById("dureePresence").innerHTML = dureeToHHMMSS(dureePresence);
+  document.getElementById("dureeACD").innerHTML = dureeToHHMMSS(dureeACD);
+  dureePresence++;
+  dureeACD++;
+}  
+  // appel la page userStatQueue.php pour récyupérer les dernières données statistique retournées au format JSON
+function getUserStatQueue(){
+  var xmlhttp = new XMLHttpRequest();
+			
+  xmlhttp.onreadystatechange = function() {
+    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		  
+      var statData = JSON.parse(xmlhttp.responseText);
+      if(statData["retour"] !== 1){
+        window.location.replace("index.html");
+        return;
+      }
+      var qList = statData["queues"];
+  
+      if(Array.isArray(qList)){
+        $(".queueRow").empty();
+        for(i=0; i<qList.length;i++){
+          if(qList[i]["nbRec"]>0){
+            sla = Math.round((qList[i]["nbOSla"] / qList[i]["nbRec"])*100) + '%';
+          } else{
+            sla= "-";
+          } 
+          if(qList[i]["tHandle"]["count"]>0){
+            avgHandle = dureeToHHMMSS(Math.round(qList[i]["tHandle"]["sum"] / qList[i]["tHandle"]["count"]));
+          } else {
+            avgHandle = "-";
+          }
+          if(qList[i]["tAcw"]["count"]>0){
+            avgAcw = dureeToHHMMSS(Math.round(qList[i]["tAcw"]["sum"] / qList[i]["tAcw"]["count"]));
+          } else {
+            avgAcw = "-";
+          }
+          $("#queueStat").append('<tr class="queueRow"><td>'+qList[i]["name"]+'</td><td class="text-center">'+qList[i]["nbAttente"]+'</td><td class="text-center">'+qList[i]["nbCom"]+'</td><td class="text-center">'+qList[i]["nbRec"]+'</td><td class="text-center">'+sla+'</td><td class="text-center">'+avgHandle+'</td><td class="text-center">'+qList[i]["tAbandon"]["count"]+'</td><td class="text-center">'+avgAcw+'</td></tr>');
+        }
+      }
+    }
+  };
+  xmlhttp.open("GET", "userStatQueue.php", true);
+  xmlhttp.send(); 
+}
+function getUserStatPerso(){
+  var xmlhttp = new XMLHttpRequest();
+			
+  xmlhttp.onreadystatechange = function() {
+    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		  
+      var statData = JSON.parse(xmlhttp.responseText);
+      if(statData["retour"] !== 1){
+        window.location.replace("index.html");
+        return;
+      }
+      document.getElementById("dureeAway").innerHTML = dureeToHHMMSS(statData["statusDuree"]["away"]);
+      document.getElementById("dureeBreak").innerHTML = dureeToHHMMSS(statData["statusDuree"]["break"]);
+      document.getElementById("dureeAvailable").innerHTML = dureeToHHMMSS(statData["statusDuree"]["available"]);
+      document.getElementById("dureeIdle").innerHTML = dureeToHHMMSS(statData["statusDuree"]["idle"]);
+      document.getElementById("dureeInteracting").innerHTML = dureeToHHMMSS(statData["statusDuree"]["interacting"]);
+      document.getElementById("dureeOnQueue").innerHTML = dureeToHHMMSS(statData["statusDuree"]["onQueue"]);
+      document.getElementById("dureeComDirect").innerHTML = dureeToHHMMSS(statData["statusDuree"]["communicating"]);
+      document.getElementById("dureeNoAnswer").innerHTML = dureeToHHMMSS(statData["statusDuree"]["noAnswer"]);
+      if(statData["conversations"]["tHandle"]["count"]>0)
+        document.getElementById("comAnswered").innerHTML = statData["conversations"]["tHandle"]["count"];
+      if(statData["conversations"]["tTalkComplete"]["count"] > 0){
+        document.getElementById("comAvg").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tTalkComplete"]["sum"]/statData["conversations"]["tTalkComplete"]["count"]));
+      } 
+      if(statData["conversations"]["tHeld"]["count"] > 0){
+        document.getElementById("comWait").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tHeld"]["sum"]/statData["conversations"]["tHeld"]["count"]));
+      }      if(statData["conversations"]["tAcw"]["count"] > 0){
+        document.getElementById("acwAvg").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tAcw"]["sum"]/statData["conversations"]["tAcw"]["count"]));
+      }
+      if(statData["conversations"]["tHandle"]["count"] > 0){
+        document.getElementById("interactAvg").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tHandle"]["sum"]/statData["conversations"]["tHandle"]["count"]));
+      }
+      document.getElementById("comTransferred").innerHTML = statData["conversations"]["nTransferred"];
+      document.getElementById("comSum").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tTalkComplete"]["sum"]));
+      document.getElementById("acwSum").innerHTML = dureeToHHMMSS(Math.round(statData["conversations"]["tAcw"]["sum"]));
+
+    }
+  };
+  xmlhttp.open("GET", "userStatPerso.php", true);
+  xmlhttp.send(); 
+}
+
+function getUserStatus(){
+  var xmlhttp = new XMLHttpRequest();
+			
+  xmlhttp.onreadystatechange = function() {
+    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+		  
+      var statData = JSON.parse(xmlhttp.responseText);
+      if(statData["retour"] !== 1){
+        window.location.replace("index.html");
+        return;
+      }
+      document.getElementById("nomAgent").innerHTML = statData["user"]["nom"];  
+      document.getElementById("etatACD").innerHTML = statData["user"]["acdStatus"];
+      document.getElementById("etatPresence").innerHTML = statData["user"]["presenceStatus"];
+      dureeACD = statData["user"]["acdDebut"];
+      dureePresence = statData["user"]["presenceDebut"];
+    }
+  };
+  xmlhttp.open("GET", "userStatus.php", true);
+  xmlhttp.send(); 
+}
+function refreshRapide(){
+  getUserStatus();
+  getUserStatQueue();  
+}
+function refreshLent(){
+  getUserStatPerso();
+}
+$(function () {
+  getUserStatus();
+  getUserStatPerso();
+  getUserStatQueue();
+  window.setInterval(actualiseCompteur, 1000);
+  window.setInterval(refreshRapide, 15000);
+  window.setInterval(refreshLent, 60000);
+});
+</script>
+
+</head>
+<body>
+
+<div class="container-fluid">
+  <div class="row">
+    <h1 style="text-align: center">Bonjour <span id="nomAgent" style="color:red"></span>, voici vos statistiques d'activité personnalisées</h1>
+  </div>
+  <div class="col-md-8">
+    <div class="row" style="background-color:Lavender; margin-right:10px">
+      <h3>Statistiques de vos files d'attente</h3>
+      <table class="table table-striped" id="queueStat">
+        <thead>
+          <tr>
+            <td class="text-center">File</td>
+            <td class="text-center">appels en attente</td>
+            <td class="text-center">appels en cours</td>
+            <td class="text-center">appels reçus</td>
+            <td class="text-center">Niveau de service</td>
+            <td class="text-center">temp moyen de traitement</td>
+            <td class="text-center">appels Abandonnés</td>
+            <td class="text-center">Post appel</td>
+          </tr>
+        </thead>
+      </table>
+	  </div>
+    <div class="row" style="background-color:Moccasin; margin-right:10px;margin-top:20px;">
+		<h3>Statistiques personnelles journalières</h3>
+    <table class="table table-striped">
+      <tr>
+        <td>Avec réponse:</td>
+        <th id="comAnswered" class="text-right">0</th> 
+        <td>Durée moyenne des conversations:</td>
+        <th id="comAvg" class="text-right">00m 00s</th>
+      </tr>
+      <tr>
+        <td>Durée moyenne de suivi après appel:</td>
+        <th id="acwAvg" class="text-right">00m 00s</th>
+        <td>temps moyen de traitement:</td>
+        <th id="interactAvg" class="text-right">00m 00s</th>
+      </tr>
+      <tr>
+        <td>temps moyen de mise en attente:</td>
+        <th id="comWait" class="text-right">00m 00s</th>
+        <td>Transféré:</td>
+        <th id="comTransferred" class="text-right">0</th>
+      </tr>
+      <tr>
+        <td>Total conversation:</td>
+        <th id="comSum" class="text-right">00m 00s</th>
+        <td>Total post-appel:</td>
+        <th id="acwSum" class="text-right">00m 00s</th>        
+      </tr>
+    </table>      
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="row" style="background-color:Moccasin">
+      <h3>Vos status</h3>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <td>Type</td>
+            <td>Status</td>
+            <td>Durée</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+              <td>Présence</td>
+            <td id="etatPresence"></td>
+            <td id="dureePresence"></td>
+          </tr>
+          <tr>
+            <td>A.C.D</td>
+            <td id="etatACD"></td>
+            <td id="dureeACD"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="row" style="background-color:Lavender; margin-top:20px;">
+    <h3>Cumul journalier / état</h3>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Type Status</th>
+            <th>Durée</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>En File d'attente</td>
+            <td id="dureeOnQueue" class="text-right"></td>
+          </tr>
+          <tr>
+            <td>Attente Interaction</td>
+            <td id="dureeIdle" class="text-right"></td>
+          </tr>
+          <tr>
+            <td><span class="glyphicon glyphicon-headphones"></span> Com + ACW</td>
+            <td id="dureeInteracting" class="text-right"></td>
+          </tr>
+          <tr>
+            <td>Disponible</td>
+            <td id="dureeAvailable" class="text-right"></td>
+          </tr>
+          <tr>
+            <td><span class="glyphicon glyphicon-glass"></span> Pause</td>
+            <td id="dureeBreak" class="text-right"></td>
+          </tr>
+          <tr>
+            <td><span class="glyphicon glyphicon-earphone"> </span> Communications Directes</td>
+            <td id="dureeComDirect" class="text-right"></td>
+          </tr>
+          <tr>
+            <td><span class="glyphicon glyphicon-plane"></span> Absent</td>
+            <td id="dureeAway" class="text-right"></td>
+          </tr>
+          <tr>
+            <td><span class="glyphicon glyphicon-warning-sign"></span> Non Réponse</td>
+            <td id="dureeNoAnswer" class="text-right"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>

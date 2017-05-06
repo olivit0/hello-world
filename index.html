@@ -1,0 +1,32 @@
+
+  <head>
+    <title>Statistiques agent Sigvaris</title>
+    <script src="../jQuery/jquery.min.js"></script>
+    <script>
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\#&]" + name + "=([^&#]*)"),
+          results = regex.exec(location.hash);
+        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+    if(window.location.hash) {
+        console.log(location.hash);
+        var token = getParameterByName('access_token');
+			
+		if(token !== null)
+			window.location.replace('https://vtiger.artelab.ovh/sigvaris/redirect.php?access_token=' + token);
+
+    } else {
+        var queryStringData = {
+            response_type : "token",
+            client_id : "4e8127aa-3649-4f88-af5b-90a737046250",
+//            client_id : "1567c38e-ffb7-4fb9-9f36-cf4b6cd73d74",
+            redirect_uri : "https://vtiger.artelab.ovh/sigvaris/index.html"
+        };
+        window.location.replace("https://login.mypurecloud.ie/oauth/authorize?" + jQuery.param(queryStringData));
+    }
+    </script>
+</head>
+<body>
+</body>
+
